@@ -161,33 +161,43 @@ contract CryptoMasks is ERC721, ReentrancyGuard, Ownable {
         }
         if (allowlist[msg.sender] == 55) {
             require(mythicStart < 4, "amount n/a");
+            require(reservedSupply > 0, "supply n/a");
             _safeMint(msg.sender, mythicStart++);
             delete allowlist[msg.sender];
             minted[msg.sender]++;
+            reservedSupply--;
         }
         if (allowlist[msg.sender] == 44) {
             require(legendaryStart < 29, "amount n/a");
+            require(reservedSupply > 0, "supply n/a");
             _safeMint(msg.sender, legendaryStart++);
             delete allowlist[msg.sender];
             minted[msg.sender]++;
+            reservedSupply--;
         }
         if (allowlist[msg.sender] == 33) {
             require(epicStart < 114, "amount n/a");
+            require(reservedSupply > 0, "supply n/a");
             _safeMint(msg.sender, epicStart++);
             delete allowlist[msg.sender];
             minted[msg.sender]++;
+            reservedSupply--;
         }
         if (allowlist[msg.sender] == 22) {
             require(rareStart < 269, "amount n/a");
+            require(reservedSupply > 0, "supply n/a");
             _safeMint(msg.sender, rareStart++);
             delete allowlist[msg.sender];
             minted[msg.sender]++;
+            reservedSupply--;
         }
         if (allowlist[msg.sender] == 11) {
             require(commonStart < 555, "amount n/a");
+            require(reservedSupply > 0, "supply n/a");
             _safeMint(msg.sender, commonStart++);
             delete allowlist[msg.sender];
             minted[msg.sender]++;
+            reservedSupply--;
         }
     }
 
