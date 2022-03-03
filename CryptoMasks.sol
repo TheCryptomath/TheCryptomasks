@@ -41,8 +41,8 @@
 // 
 // CONTRACT BALANCE INFO
 // Withdraw will distribute all balance between following
-// 20% to shareholder = 0x627137FC6cFa3fbfa0ed936fB4B5d66fB383DBE8
-// 80% to owner = 0xB9aB0B590abC88037a45690a68e1Ee41c5ea7365
+// 15% to shareholder = 0x627137FC6cFa3fbfa0ed936fB4B5d66fB383DBE8
+// 85% to owner = 0xB9aB0B590abC88037a45690a68e1Ee41c5ea7365
 
 // SPDX-License-Identifier: GPL-3.0
 
