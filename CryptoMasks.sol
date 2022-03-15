@@ -44,18 +44,19 @@
 // 15% to shareholder = 0x627137FC6cFa3fbfa0ed936fB4B5d66fB383DBE8
 // 85% to owner = 0xB9aB0B590abC88037a45690a68e1Ee41c5ea7365
 
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: MIT
 
 // title:  Crypto Masks
 // author: sadat.pk
 
-pragma solidity >=0.7.0 <0.9.0;
+pragma solidity ^0.8.12;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/interfaces/IERC2981.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract CryptoMasks is ERC721, ReentrancyGuard, Ownable {
+contract CryptoMasks is ERC721, IERC2981, ReentrancyGuard, Ownable {
     using Strings for uint256;
 
     uint256 public maxSupply = 555;
@@ -66,6 +67,7 @@ contract CryptoMasks is ERC721, ReentrancyGuard, Ownable {
     uint256 public priceLegendary = 0.12 ether;
     uint256 public priceMythic = 0.25 ether;
     uint256 public pricePublicSale = 0.03 ether;
+    
 
     uint256 private mythicStart;
     uint256 private legendaryStart = 4;
@@ -75,6 +77,7 @@ contract CryptoMasks is ERC721, ReentrancyGuard, Ownable {
     
     string private ipfslink;
     string private extention = ".json";
+    string private collectionMetadata;
 
     bool public isPaused = true;
     bool public inPresale = true;
@@ -82,6 +85,9 @@ contract CryptoMasks is ERC721, ReentrancyGuard, Ownable {
     address private shareHolderWallet;
     uint256 private sharePercent;
     address private ownerWallet;
+
+    uint256 public royalty = 65;
+    address private royaltyReceiver;
 
     mapping(address => uint256) private allowlist;
     mapping(address => uint256) private minted;
@@ -114,10 +120,6 @@ contract CryptoMasks is ERC721, ReentrancyGuard, Ownable {
     modifier reserveCheck(uint256 _quantity) {
         require(_quantity <= reservedSupply, "supply n/a");
         _;
-    }
-
-    function _metaData() internal view virtual returns (string memory) {
-        return ipfslink;
     }  
 
     // public 
@@ -225,6 +227,28 @@ contract CryptoMasks is ERC721, ReentrancyGuard, Ownable {
         }
     }
 
+    // standard functions
+
+    function isApprovedForAll(address _owner, address _operator) public override view returns (bool isOperator) {
+        // pre-approve opensea
+        if (_operator == address(0x58807baD0B376efc12F5AD86aAc70E78ed67deaE)) {
+            return true;
+        }
+        return ERC721.isApprovedForAll(_owner, _operator);
+    }
+
+    function royaltyInfo(uint256, /*_tokenId*/ uint256 _salePrice) external view override(IERC2981) returns (address Receiver, uint256 royaltyAmount) {
+        return (royaltyReceiver, (_salePrice * royalty) / 1000);
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721, IERC165) returns (bool) {
+        return (interfaceId == type(IERC2981).interfaceId || super.supportsInterface(interfaceId));
+    }
+
+    function contractURI() external view returns (string memory) {
+        return collectionMetadata;
+    }
+
     function walletOfOwner(address _owner) public virtual view returns (uint256[] memory) {
         uint256 _balance = balanceOf(_owner);
         uint256[] memory _tokens = new uint256[](_balance);
@@ -245,12 +269,11 @@ contract CryptoMasks is ERC721, ReentrancyGuard, Ownable {
 
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
-        string memory currentmetadatauri = _metaData();
         return
-            bytes(currentmetadatauri).length > 0
+            bytes(ipfslink).length > 0
                 ? string(
                     abi.encodePacked(
-                        currentmetadatauri,
+                        ipfslink,
                         tokenId.toString(),
                         extention
                     )
@@ -316,32 +339,21 @@ contract CryptoMasks is ERC721, ReentrancyGuard, Ownable {
         }
     }
 
-    function setPriceCommon(uint256 _newpriceCommon) public onlyOwner {
-        priceCommon = _newpriceCommon;
-    }
-
-    function setPriceRare(uint256 _newpriceRare) public onlyOwner {
-        priceRare = _newpriceRare;
-    }
-
-    function setPriceEpic(uint256 _newpriceEpic) public onlyOwner {
-        priceEpic = _newpriceEpic;
-    }
-
-    function setPriceLegendary(uint256 _newpriceLegendary) public onlyOwner {
-        priceLegendary = _newpriceLegendary;
-    }
-
-    function setPriceMythic(uint256 _newpriceMythic) public onlyOwner {
-        priceMythic = _newpriceMythic;
-    }
-
-    function setPricePublicSale(uint256 _newpricePublicSale) public onlyOwner {
-        pricePublicSale = _newpricePublicSale;
+    function setPricesInWei(uint256 _newCommon, uint256 _newRare, uint256 _newEpic, uint256 _newLegendary, uint256 _newMythic, uint256 _newPublic) public onlyOwner {
+        priceCommon = _newCommon;
+        priceRare = _newRare;
+        priceEpic = _newEpic;
+        priceLegendary = _newLegendary;
+        priceMythic = _newMythic;
+        pricePublicSale = _newPublic;
     }
 
     function setIpfslink(string memory _ipfslink) public onlyOwner {
         ipfslink = _ipfslink;
+    }
+
+    function setCollectionMetadata(string memory _newCollectionMetadata) public onlyOwner {
+        collectionMetadata = _newCollectionMetadata;
     }
 
     function setExtention(string memory _newextention) public onlyOwner {
@@ -356,13 +368,18 @@ contract CryptoMasks is ERC721, ReentrancyGuard, Ownable {
         inPresale = _state;
     }
 
-    function setShareHolders(address _wallet, uint256 _percent, address _wallet2) public onlyOwner {
-        shareHolderWallet = _wallet;
-        sharePercent = _percent;
-        ownerWallet = _wallet2;
+    function setRoyalty(address _receiverWallet, uint256 _percent) public onlyOwner {
+        royaltyReceiver = _receiverWallet;
+        royalty = _percent * 10;
     }
 
-    function withdrawETH() public payable onlyOwner nonReentrant {
+    function setShareHolders(address _shareHolderWallet, uint256 _percent, address _ownerWallet) public onlyOwner {
+        shareHolderWallet = _shareHolderWallet;
+        sharePercent = _percent;
+        ownerWallet = _ownerWallet;
+    }
+
+    function withdrawETH() public onlyOwner nonReentrant {
         // send percent of balance to share holder wallet
         (bool hs, ) = payable(shareHolderWallet).call{value: (address(this).balance * sharePercent) / 100}("");
         require(hs);
@@ -371,3 +388,4 @@ contract CryptoMasks is ERC721, ReentrancyGuard, Ownable {
         require(os);
     }
 }
+
